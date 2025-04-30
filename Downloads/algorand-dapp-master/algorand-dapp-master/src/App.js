@@ -1,82 +1,91 @@
 import React, { useState } from "react";
-import Cover from "./components/Cover";
-import "./App.css";
-import Wallet from "./components/Wallet";
-import { Container, Nav } from "react-bootstrap";
-import Properties from "./components/property/Properties";
-import { indexerClient, myAlgoConnect } from "./utils/constants";
-import { Notification } from "./components/utils/Notifications";
+import { PeraWalletConnect } from "@perawallet/connect";
+import algosdk from "algosdk";
 
-const App = function AppWrapper() {
-  const [address, setAddress] = useState(null);
-  const [name, setName] = useState(null);
-  const [balance, setBalance] = useState(0);
+const peraWallet = new PeraWalletConnect();
 
-  const fetchBalance = async (accountAddress) => {
-    indexerClient
-      .lookupAccountByID(accountAddress)
-      .do()
-      .then((response) => {
-        const _balance = response.account.amount;
-        setBalance(_balance);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+function App() {
+  const [accountAddress, setAccountAddress] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const [formData, setFormData] = useState({
+    propertyTitle: "",
+    location: "",
+    description: "",
+    price: "",
+  });
+
+  const handleConnectWallet = async () => {
+    try {
+      const newAccounts = await peraWallet.connect();
+      setAccountAddress(newAccounts[0]);
+      setIsConnected(true);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const connectWallet = async () => {
-    myAlgoConnect
-      .connect()
-      .then((accounts) => {
-        const _account = accounts[0];
-        setAddress(_account.address);
-        setName(_account.name);
-        fetchBalance(_account.address);
-      })
-      .catch((error) => {
-        console.log("Could not connect to MyAlgo wallet");
-        console.error(error);
-      });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const disconnect = () => {
-    setAddress(null);
-    setName(null);
-    setBalance(null);
+  const handleListProperty = async (e) => {
+    e.preventDefault();
+    console.log("Submitting listing:", formData);
+
+    // Optional: send transaction logic or smart contract interaction here
   };
 
   return (
-    <>
-      <Notification />
-      {address ? (
-        <Container fluid="md">
-          <Nav className="justify-content-end pt-3 pb-5">
-            <Nav.Item>
-              <Wallet
-                address={address}
-                name={name}
-                amount={balance}
-                disconnect={disconnect}
-                symbol={"ALGO"}
-              />
-            </Nav.Item>
-          </Nav>
-          <main>
-            <Properties address={address} fetchBalance={fetchBalance} />
-          </main>
-        </Container>
+    <div style={{ maxWidth: "500px", margin: "2rem auto", fontFamily: "sans-serif" }}>
+      <h1>Housing Property DApp</h1>
+      {!isConnected ? (
+        <button onClick={handleConnectWallet}>Connect Wallet</button>
       ) : (
-        <Cover
-          name={"Housing Property Dapp"}
-          coverImg={
-            "https://209859-635214-1-raikfcquaxqncofqfm.stackpathdns.com/wp-content/uploads/2018/09/affordable_housing-1024x562.jpg"
-          }
-          connect={connectWallet}
-        />
+        <>
+          <p><strong>Connected:</strong> {accountAddress}</p>
+          <form onSubmit={handleListProperty}>
+            <input
+              name="propertyTitle"
+              placeholder="Property Title"
+              value={formData.propertyTitle}
+              onChange={handleChange}
+              required
+              style={{ width: "100%", marginBottom: "10px" }}
+            />
+            <input
+              name="location"
+              placeholder="Location"
+              value={formData.location}
+              onChange={handleChange}
+              required
+              style={{ width: "100%", marginBottom: "10px" }}
+            />
+            <textarea
+              name="description"
+              placeholder="Description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={3}
+              required
+              style={{ width: "100%", marginBottom: "10px" }}
+            />
+            <input
+              name="price"
+              placeholder="Price (ALGO)"
+              value={formData.price}
+              onChange={handleChange}
+              required
+              type="number"
+              style={{ width: "100%", marginBottom: "10px" }}
+            />
+            <button type="submit">List Property</button>
+          </form>
+        </>
       )}
-    </>
+    </div>
   );
-};
+}
 
 export default App;
