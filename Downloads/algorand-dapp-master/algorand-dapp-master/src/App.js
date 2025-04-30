@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PeraWalletConnect } from "@perawallet/connect";
 import algosdk from "algosdk";
 
 const peraWallet = new PeraWalletConnect();
 
+const algodClient = new algosdk.Algodv2(
+  "", 
+  "https://testnet-api.algonode.cloud", 
+  ""
+);
+
 function App() {
   const [accountAddress, setAccountAddress] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-
+  const [balance, setBalance] = useState(null);
   const [formData, setFormData] = useState({
     propertyTitle: "",
     location: "",
@@ -15,15 +21,21 @@ function App() {
     price: "",
   });
 
-  const [listings, setListings] = useState([]);
+  const [properties, setProperties] = useState([]);
 
   const handleConnectWallet = async () => {
     try {
       const newAccounts = await peraWallet.connect();
-      setAccountAddress(newAccounts[0]);
+      const address = newAccounts[0];
+      setAccountAddress(address);
       setIsConnected(true);
+
+      // Fetch and set balance
+      const accountInfo = await algodClient.accountInformation(address).do();
+      const algoBalance = accountInfo.amount / 1e6;
+      setBalance(algoBalance);
     } catch (error) {
-      console.error(error);
+      console.error("Wallet connect error:", error);
     }
   };
 
@@ -32,12 +44,9 @@ function App() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleListProperty = async (e) => {
+  const handleListProperty = (e) => {
     e.preventDefault();
-    console.log("Submitting listing:", formData);
-
-    setListings((prevListings) => [...prevListings, { ...formData }]);
-
+    setProperties((prev) => [...prev, formData]);
     setFormData({
       propertyTitle: "",
       location: "",
@@ -47,13 +56,15 @@ function App() {
   };
 
   return (
-    <div style={{ maxWidth: "500px", margin: "2rem auto", fontFamily: "sans-serif" }}>
+    <div style={{ maxWidth: "600px", margin: "2rem auto", fontFamily: "sans-serif" }}>
       <h1>Housing Property DApp</h1>
       {!isConnected ? (
         <button onClick={handleConnectWallet}>Connect Wallet</button>
       ) : (
         <>
           <p><strong>Connected:</strong> {accountAddress}</p>
+          <p><strong>Balance:</strong> {balance !== null ? `${balance.toFixed(2)} ALGO` : "Loading..."}</p>
+
           <form onSubmit={handleListProperty}>
             <input
               name="propertyTitle"
@@ -92,19 +103,15 @@ function App() {
             <button type="submit">List Property</button>
           </form>
 
-          {listings.length > 0 && (
-            <div style={{ marginTop: "2rem" }}>
-              <h2>Listed Properties</h2>
-              {listings.map((listing, index) => (
-                <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
-                  <h3>{listing.propertyTitle}</h3>
-                  <p><strong>Location:</strong> {listing.location}</p>
-                  <p><strong>Description:</strong> {listing.description}</p>
-                  <p><strong>Price:</strong> {listing.price} ALGO</p>
-                </div>
-              ))}
+          <h2>Listed Properties</h2>
+          {properties.map((property, index) => (
+            <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
+              <h3>{property.propertyTitle}</h3>
+              <p><strong>Location:</strong> {property.location}</p>
+              <p><strong>Description:</strong> {property.description}</p>
+              <p><strong>Price:</strong> {property.price} ALGO</p>
             </div>
-          )}
+          ))}
         </>
       )}
     </div>
