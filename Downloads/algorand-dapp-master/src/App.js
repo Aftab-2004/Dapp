@@ -1,39 +1,77 @@
-import React from "react";
-import SendAlgo from "./components/wallet/SendAlgo";
+import React, { useState } from 'react';
+import { connectWallet, sendAlgo } from './wallets/PeraWalletConnect';
+import PropertyList from './components/property/PropertyList';
 
 function App() {
-  // Connect wallet using AlgoSigner
-  const connectWallet = async () => {
-    try {
-      await AlgoSigner.connect();
-      alert("✅ AlgoSigner wallet connected!");
-    } catch (err) {
-      alert("❌ Wallet connection failed: " + err.message);
+  const [account, setAccount] = useState(null);
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [status, setStatus] = useState('');
+
+  const handleConnect = async () => {
+    const addr = await connectWallet();
+    if (addr) {
+      setAccount(addr);
+      setStatus('Wallet connected');
+    } else {
+      setStatus('Connection failed');
+    }
+  };
+
+  const handleSend = async () => {
+    if (!account || !recipient || !amount) {
+      setStatus('Missing required fields');
+      return;
+    }
+
+    setStatus('Sending transaction...');
+    const result = await sendAlgo(account, recipient, parseFloat(amount), note);
+    if (result && result.txId) {
+      setStatus(`Transaction sent! ID: ${result.txId}`);
+    } else {
+      setStatus('Transaction failed');
     }
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "Arial", textAlign: "center" }}>
-      <h1>Housing Property Dapp</h1>
-      <p>Please connect your wallet to continue.</p>
+    <div style={{ textAlign: 'center', marginTop: '40px', fontFamily: 'Arial' }}>
+      <h1>Housing Property DApp</h1>
 
-      <button
-        onClick={connectWallet}
-        style={{
-          padding: "10px 20px",
-          fontSize: "16px",
-          cursor: "pointer",
-          borderRadius: "8px",
-          backgroundColor: "#333",
-          color: "#fff",
-          border: "1px solid #ccc",
-          marginBottom: "2rem",
-        }}
-      >
-        Connect Wallet (AlgoSigner)
-      </button>
+      {!account ? (
+        <button onClick={handleConnect}>Connect Wallet</button>
+      ) : (
+        <>
+          <p>✅ Connected: {account}</p>
 
-      <SendAlgo />
+          <div style={{ margin: '2rem 0' }}>
+            <h3>Send ALGO</h3>
+            <input
+              type="text"
+              placeholder="Recipient Address"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+            /><br /><br />
+            <input
+              type="number"
+              placeholder="Amount (Algos)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            /><br /><br />
+            <input
+              type="text"
+              placeholder="Note (optional)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            /><br /><br />
+            <button onClick={handleSend}>Send Algo</button>
+            <p>{status}</p>
+          </div>
+
+          {/* Property Listing Section */}
+          <PropertyList account={account} />
+        </>
+      )}
     </div>
   );
 }
