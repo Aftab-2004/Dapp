@@ -15,6 +15,8 @@ function App() {
     price: "",
   });
 
+  const [listings, setListings] = useState([]);
+
   const handleConnectWallet = async () => {
     try {
       const newAccounts = await peraWallet.connect();
@@ -34,7 +36,14 @@ function App() {
     e.preventDefault();
     console.log("Submitting listing:", formData);
 
-    // Optional: send transaction logic or smart contract interaction here
+    setListings((prevListings) => [...prevListings, { ...formData }]);
+
+    setFormData({
+      propertyTitle: "",
+      location: "",
+      description: "",
+      price: "",
+    });
   };
 
   return (
@@ -82,6 +91,20 @@ function App() {
             />
             <button type="submit">List Property</button>
           </form>
+
+          {listings.length > 0 && (
+            <div style={{ marginTop: "2rem" }}>
+              <h2>Listed Properties</h2>
+              {listings.map((listing, index) => (
+                <div key={index} style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem" }}>
+                  <h3>{listing.propertyTitle}</h3>
+                  <p><strong>Location:</strong> {listing.location}</p>
+                  <p><strong>Description:</strong> {listing.description}</p>
+                  <p><strong>Price:</strong> {listing.price} ALGO</p>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
